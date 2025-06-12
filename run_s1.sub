@@ -1,21 +1,43 @@
 #!/bin/bash
-#SBATCH --job-name=s1_apptainer
-#SBATCH --partition=debug
+#SBATCH --job-name=s1_scaling
+#SBATCH --partition=a100
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --gpus=1
-#SBATCH --mem=32G
+#SBATCH --mem=120G
 #SBATCH --time=04:00:00
-#SBATCH --output=logs/s1_scaling_%j.log
+#SBATCH --output=logs/s1_output.log
+#SBATCH --error=logs/s1_error.log
 
-# 🚀 运行 Apptainer 容器并进入 s1 项目路径
+echo "📌 SLURM job started on: $(hostname)"
+echo "📅 Date: $(date)"
+
+# === 配置路径 ===
+DEF_PATH=/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/apptainer.def
+SIF_PATH=/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/s1.sif
+PROJECT_DIR=/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1
+
+# === 自动构建 .sif 镜像 ===
+if [ -f "$SIF_PATH" ]; then
+  echo "✅ 检测到已有容器镜像 $SIF_PATH，跳过构建。"
+else
+  echo "🚧 未找到 $SIF_PATH，开始构建..."
+  apptainer build --fakeroot "$SIF_PATH" "$DEF_PATH"
+  if [ $? -ne 0 ]; then
+    echo "❌ 构建失败，终止任务。"
+    exit 1
+  fi
+fi
+
+# === 启动推理实验 ===
 apptainer exec --nv \
-  --bind ./cache:/opt/app/cache \
-  --bind ./s1:/opt/app/s1 \
-  s1.sif \
+  --bind $PROJECT_DIR/cache:/opt/app/cache \
+  --bind $PROJECT_DIR/s1:/opt/app/s1 \
+  $SIF_PATH \
   bash -c "cd /opt/app/s1/eval/lm-evaluation-harness && \
   for k in 512 1024 2048 4096 8192; do
+    echo \"🚀 Running inference with max_tokens_thinking=\$k\"
     lm_eval \
       --model vllm \
       --model_args pretrained=simplescaling/s1.1-32B,dtype=float32,tensor_parallel_size=1 \
