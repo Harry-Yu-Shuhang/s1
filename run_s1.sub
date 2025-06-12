@@ -37,7 +37,7 @@ apptainer exec --nv "$SIF_PATH" bash -c '
     echo "🚀 Running inference with max_tokens_thinking=$k"
     if ! lm_eval \
       --model vllm \
-      --model_args pretrained=simplescaling/s1.1-32B,dtype=float32,tensor_parallel_size=1 \
+      --model_args pretrained=Qwen/Qwen2.5-7B-Instruct-AWQ,dtype=float32,tensor_parallel_size=1 \
       --tasks aime24_nofigures \
       --output_path /opt/app/s1/results/s1_${k} \
       --log_samples \
