@@ -1,0 +1,27 @@
+#!/bin/bash
+#SBATCH --job-name=s1_apptainer
+#SBATCH --partition=a100
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --gpus=1
+#SBATCH --mem=120G
+#SBATCH --time=04:00:00
+#SBATCH --output=logs/s1_scaling_%j.log
+
+# 🚀 运行 Apptainer 容器并进入 s1 项目路径
+apptainer exec --nv \
+  --bind ./cache:/opt/app/cache \
+  --bind ./s1:/opt/app/s1 \
+  s1.sif \
+  bash -c "cd /opt/app/s1/eval/lm-evaluation-harness && \
+  for k in 512 1024 2048 4096 8192; do
+    lm_eval \
+      --model vllm \
+      --model_args pretrained=simplescaling/s1.1-32B,dtype=float32,tensor_parallel_size=1 \
+      --tasks aime24_nofigures \
+      --output_path ../../results/s1_\${k} \
+      --log_samples \
+      --apply_chat_template \
+      --gen_kwargs \"max_gen_toks=32768,max_tokens_thinking=\${k}\"
+  done"
