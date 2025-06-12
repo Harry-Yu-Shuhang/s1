@@ -20,8 +20,7 @@ From: nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
     pip install -e .[math,vllm]
 
 %files
-    s1 /opt/app/s1       # 📦 打包整个 s1 项目
-    cache /opt/app/cache # 📦 打包模型缓存（可选）
+    /mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/s1 /opt/app/s1
 
 %runscript
     cd /opt/app/s1
