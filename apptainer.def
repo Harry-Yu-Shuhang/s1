@@ -20,7 +20,7 @@ From: nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
     pip install -e .[math,vllm]
 
 %files
-    /mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/s1 /opt/app/s1
+    /mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1 /opt/app/s1
 
 %runscript
     cd /opt/app/s1
