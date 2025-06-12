@@ -10,40 +10,56 @@
 #SBATCH --output=logs/s1_output.log
 #SBATCH --error=logs/s1_error.log
 
+set -euo pipefail  # ⛔ 一出错就退出，打印错误
+
 echo "📌 SLURM job started on: $(hostname)"
 echo "📅 Date: $(date)"
 
 # === 配置路径 ===
 DEF_PATH=/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/apptainer.def
 SIF_PATH=/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/s1.sif
-PROJECT_DIR=/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1
+REPO_PATH=/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1
 
 # === 自动构建 .sif 镜像 ===
 if [ -f "$SIF_PATH" ]; then
   echo "✅ 检测到已有容器镜像 $SIF_PATH，跳过构建。"
 else
   echo "🚧 未找到 $SIF_PATH，开始构建..."
-  apptainer build --fakeroot "$SIF_PATH" "$DEF_PATH"
-  if [ $? -ne 0 ]; then
-    echo "❌ 构建失败，终止任务。"
+  apptainer build --fakeroot "$SIF_PATH" "$DEF_PATH" || {
+    echo "❌ 容器构建失败，退出。"
     exit 1
-  fi
+  }
+fi
+
+# === 检查目录是否存在 ===
+if [ ! -d "$REPO_PATH" ]; then
+  echo "❌ 项目目录 $REPO_PATH 不存在，检查路径。"
+  exit 1
 fi
 
 # === 启动推理实验 ===
+echo "🚀 启动容器运行 vLLM + lm_eval 推理..."
+
 apptainer exec --nv \
-  --bind $PROJECT_DIR/cache:/opt/app/cache \
-  --bind $PROJECT_DIR/s1:/opt/app/s1 \
+  --bind $REPO_PATH:/opt/app/s1 \
+  --bind $REPO_PATH/cache:/opt/app/cache \
   $SIF_PATH \
-  bash -c "cd /opt/app/s1/eval/lm-evaluation-harness && \
-  for k in 512 1024 2048 4096 8192; do
-    echo \"🚀 Running inference with max_tokens_thinking=\$k\"
-    lm_eval \
-      --model vllm \
-      --model_args pretrained=simplescaling/s1.1-32B,dtype=float32,tensor_parallel_size=1 \
-      --tasks aime24_nofigures \
-      --output_path ../../results/s1_\${k} \
-      --log_samples \
-      --apply_chat_template \
-      --gen_kwargs \"max_gen_toks=32768,max_tokens_thinking=\${k}\"
-  done"
+  bash -c "
+    cd /opt/app/s1/eval/lm-evaluation-harness || exit 1
+    for k in 512 1024 2048 4096 8192; do
+      echo \"🚀 Running inference with max_tokens_thinking=\$k\"
+      lm_eval \
+        --model vllm \
+        --model_args pretrained=simplescaling/s1.1-32B,dtype=float32,tensor_parallel_size=1 \
+        --tasks aime24_nofigures \
+        --output_path ../../results/s1_\${k} \
+        --log_samples \
+        --apply_chat_template \
+        --gen_kwargs \"max_gen_toks=32768,max_tokens_thinking=\${k}\" || exit 1
+    done
+  " || {
+    echo "❌ Apptainer 执行失败，任务中止。"
+    exit 1
+  }
+
+echo "✅ 实验全部完成。"
