@@ -32,14 +32,16 @@ fi
 # === 容器内运行推理任务 ===
 apptainer exec --nv "$SIF_PATH" bash -c '
   set -euo pipefail
-  cd /opt/app/s1/eval/lm-evaluation-harness || { echo "❌ 路径不存在"; exit 1; }
+  cd /opt/app/s1  # ✅ 切换到可写挂载路径
+  mkdir -p results
+
   for k in 512 1024 2048 4096 8192; do
     echo "🚀 Running inference with max_tokens_thinking=$k"
     if ! lm_eval \
       --model vllm \
       --model_args pretrained=Qwen/Qwen2.5-7B-Instruct-AWQ,dtype=float16,tensor_parallel_size=1 \
       --tasks aime24_nofigures \
-      --output_path /mnt/fast/nobackup/scratch4weeks/ly0008/ysh \
+      --output_path ./results/s1_${k} \
       --log_samples \
       --apply_chat_template \
       --gen_kwargs "max_gen_toks=32768,max_tokens_thinking=${k}"; then
