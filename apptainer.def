@@ -2,8 +2,8 @@
 From: nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
 %environment
-    export HF_HOME=/opt/app/cache
-    export TRANSFORMERS_CACHE=/opt/app/cache
+    export HF_HOME=/tmp/cache
+    export TRANSFORMERS_CACHE=/tmp/cache
     export PYTHONUNBUFFERED=1
 
 %post
