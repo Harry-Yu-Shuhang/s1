@@ -1,12 +1,10 @@
-Bootstrap: docker
+ Bootstrap: docker
 From: nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
 %environment
-    export LC_ALL=C.UTF-8
-    export LANG=C.UTF-8
+    export HF_HOME=/opt/app/cache
+    export TRANSFORMERS_CACHE=/opt/app/cache
     export PYTHONUNBUFFERED=1
-    export TRANSFORMERS_CACHE=/opt/app/cache/hf
-    export HF_HOME=/opt/app/cache/hf
 
 %post
     apt-get update && apt-get install -y --no-install-recommends \
@@ -15,19 +13,16 @@ From: nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
     pip install --upgrade pip
     pip install torch==2.2.2+cu118 torchvision --index-url https://download.pytorch.org/whl/cu118
+    pip install transformers accelerate vllm datasets matplotlib
 
-    # 安装核心依赖
-    pip install transformers accelerate vllm datasets sentencepiece einops matplotlib
-
-    # 克隆并安装 lm-eval
-    cd /opt/app/
-    git clone https://github.com/EleutherAI/lm-evaluation-harness.git
-    cd lm-evaluation-harness
+    # 安装 lm-eval
+    cd /opt/app/s1/eval/lm-evaluation-harness
     pip install -e .[math,vllm]
 
 %files
-    . /opt/app/
+    s1 /opt/app/s1       # 📦 打包整个 s1 项目
+    cache /opt/app/cache # 📦 打包模型缓存（可选）
 
 %runscript
-    cd /opt/app
+    cd /opt/app/s1
     exec "$@"
