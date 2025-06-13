@@ -7,8 +7,8 @@
 #SBATCH --gpus=1
 #SBATCH --mem=120G
 #SBATCH --time=04:00:00
-#SBATCH --output=logs/s1_output_Qwen2.5-32B-Instruct-GPTQ-Int8.log
-#SBATCH --error=logs/s1_error_Qwen2.5-32B-Instruct-GPTQ-Int8.log
+#SBATCH --output=logs/s1_output_Qwen2.5-32B-Instruct-AWQ.log
+#SBATCH --error=logs/s1_error_Qwen2.5-32B-Instruct-AWQ.log
 
 set -euo pipefail
 
@@ -17,6 +17,7 @@ echo "📅 Date: $(date)"
 
 MODEL_ID="Qwen2.5-32B-Instruct-GPTQ-Int8"
 MODEL_HF="Qwen/Qwen2.5-32B-Instruct-GPTQ-Int8"
+TASKS="aime24_nofigures,openai_math,gpqa_diamond_openai"
 
 DEF_PATH=/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/apptainer.def
 SIF_PATH=/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/s1.sif
@@ -39,16 +40,18 @@ mkdir -p "$RESULTS_LOCAL"
 
 # === 容器内运行推理任务 ===
 for k in 512 1024 2048 4096 8192; do
+  SUBDIR="s1_${k}"
   echo "🚀 Running inference with max_tokens_thinking=$k"
+
   apptainer exec --nv --bind results:/workspace/results "$SIF_PATH" bash -c "
     set -euo pipefail
-    mkdir -p /workspace/results/${MODEL_ID}
+    mkdir -p /workspace/results/${SUBDIR}/${MODEL_ID}
     cd /opt/app/s1
     lm_eval \
       --model vllm \
       --model_args pretrained=${MODEL_HF},dtype=float16,tensor_parallel_size=1 \
-      --tasks aime24_nofigures \
-      --output_path /workspace/results/s1_${k} \
+      --tasks ${TASKS} \
+      --output_path /workspace/results/${SUBDIR}/${MODEL_ID} \
       --log_samples \
       --apply_chat_template \
       --gen_kwargs \"max_gen_toks=32768,max_tokens_thinking=${k}\"
