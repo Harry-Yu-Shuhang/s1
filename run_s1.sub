@@ -34,8 +34,11 @@ else
   }
 fi
 
+# === 宿主机结果目录准备 ===
+mkdir -p "$RESULTS_LOCAL"
+
 # === 容器内运行推理任务 ===
-apptainer exec --nv "$SIF_PATH" bash -c "
+apptainer exec --nv --bind results:/workspace/results "$SIF_PATH" bash -c "
   set -euo pipefail
   mkdir -p ${RESULTS_IN_CONTAINER}
   cd /opt/app/s1
@@ -55,10 +58,5 @@ apptainer exec --nv "$SIF_PATH" bash -c "
     fi
   done
 "
-
-# === 复制结果出来 ===
-echo "📥 拷贝结果文件到宿主机 ${RESULTS_LOCAL}/"
-mkdir -p "$RESULTS_LOCAL"
-apptainer exec --nv "$SIF_PATH" cp -r "${RESULTS_IN_CONTAINER}/"* "$RESULTS_LOCAL"/
 
 echo "✅ 所有推理任务完成，结果已保存到宿主机目录：$RESULTS_LOCAL/"
