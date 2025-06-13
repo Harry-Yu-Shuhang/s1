@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=s1_scaling
-#SBATCH --partition=debug
+#SBATCH --job-name=s1_Qwen2.5-32B-Instruct-AWQ
+#SBATCH --partition=a100
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --gpus=1
-#SBATCH --mem=20G
+#SBATCH --mem=120G
 #SBATCH --time=04:00:00
 #SBATCH --output=logs/s1_output.log
 #SBATCH --error=logs/s1_error.log
@@ -15,8 +15,8 @@ set -euo pipefail
 echo "📌 SLURM job started on: $(hostname)"
 echo "📅 Date: $(date)"
 
-MODEL_ID="Qwen2.5-7B-Instruct-AWQ"
-MODEL_HF="Qwen/Qwen2.5-7B-Instruct-AWQ"
+MODEL_ID="Qwen2.5-32B-Instruct-AWQ"
+MODEL_HF="Qwen/Qwen2.5-32B-Instruct-AWQ"
 
 DEF_PATH=/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/apptainer.def
 SIF_PATH=/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/s1.sif
@@ -48,7 +48,7 @@ for k in 512 1024 2048 4096 8192; do
       --model vllm \
       --model_args pretrained=${MODEL_HF},dtype=float16,tensor_parallel_size=1 \
       --tasks aime24_nofigures \
-      --output_path /workspace/results/${MODEL_ID}/s1_${k} \
+      --output_path /workspace/results/s1_${k} \
       --log_samples \
       --apply_chat_template \
       --gen_kwargs \"max_gen_toks=32768,max_tokens_thinking=${k}\"
