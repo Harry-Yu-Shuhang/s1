@@ -7,8 +7,8 @@
 #SBATCH --gpus=1
 #SBATCH --mem=120G
 #SBATCH --time=04:00:00
-#SBATCH --output=logs/s1_output.log
-#SBATCH --error=logs/s1_error.log
+#SBATCH --output=logs/s1_output_Qwen2.5-32B-Instruct-AWQ.log
+#SBATCH --error=logs/s1_error_Qwen2.5-32B-Instruct-AWQ.log
 
 set -euo pipefail
 
