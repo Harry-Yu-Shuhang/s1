@@ -35,9 +35,6 @@ else
   }
 fi
 
-# === 宿主机结果目录准备 ===
-mkdir -p "$RESULTS_LOCAL"
-
 # === 容器内运行推理任务 ===
 for k in 512 1024 2048 4096 8192; do
   SUBDIR="s1_${k}"
