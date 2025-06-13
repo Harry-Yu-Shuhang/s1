@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=s1_scaling
-#SBATCH --partition=a100
+#SBATCH --partition=debug
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --gpus=1
-#SBATCH --mem=120G
+#SBATCH --mem=20G
 #SBATCH --time=04:00:00
 #SBATCH --output=logs/s1_output.log
 #SBATCH --error=logs/s1_error.log
