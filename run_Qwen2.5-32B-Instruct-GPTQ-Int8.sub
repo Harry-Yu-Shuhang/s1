@@ -6,9 +6,11 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --gpus=1
 #SBATCH --mem=120G
-#SBATCH --time=04:00:00
+#SBATCH --time=06:00:00
 #SBATCH --output=logs/s1_output_Qwen2.5-32B-Instruct-GPTQ-Int8.log
 #SBATCH --error=logs/s1_error_Qwen2.5-32B-Instruct-GPTQ-Int8.log
+
+mkdir -p results
 
 set -euo pipefail
 
