@@ -213,4 +213,6 @@ ENV/
 
 /results
 
+ .hf_token
+
 # End of https://www.gitignore.io/api/macos,linux,django,python,pycharm
