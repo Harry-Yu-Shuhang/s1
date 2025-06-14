@@ -9,44 +9,48 @@
 #SBATCH --output=logs/s1-32B_output.log
 #SBATCH --error=logs/s1-32B_error.log
 
-mkdir -p results
-
 set -euo pipefail
 trap 'echo "❌ 脚本失败: 行号 $LINENO, 状态码 $?"' ERR
 
 echo "📌 SLURM job started on: $(hostname)"
 echo "📅 Date: $(date)"
 
+# ✅ 模型与任务设置
 MODEL_ID="s1-32B"
 MODEL_HF="simplescaling/s1-32B"
-TASK_LIST=("aime24_nofigures" "openai_math" "gpqa_diamond_openai")
+# TASK_LIST=("aime24_nofigures" "openai_math" "gpqa_diamond_openai")
+TASK_LIST=("aime24_nofigures" "gpqa_diamond_openai")
 
-DEF_PATH=/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/apptainer.def
-SIF_PATH=/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/s1.sif
+DEF_PATH="/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/apptainer.def"
+SIF_PATH="/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/s1.sif"
 RESULTS_LOCAL="results/${MODEL_ID}"
 RESULTS_IN_CONTAINER="/workspace/results/${MODEL_ID}"
 
+mkdir -p "$RESULTS_LOCAL"
+
+# ✅ HF Token 读取与校验
 HF_TOKEN=$(<.hf_token)
 if [ -z "$HF_TOKEN" ]; then
   echo "❌ .hf_token 文件为空或不存在，请创建该文件并填入 Hugging Face token"
   exit 1
 fi
 
-# === 构建容器镜像（如必要）===
+# ✅ 检查并构建镜像（如未构建）
 if [ -f "$SIF_PATH" ]; then
   echo "✅ 容器镜像已存在: $SIF_PATH，跳过构建。"
 else
-  echo "🚧 开始构建 $SIF_PATH ..."
+  echo "🚧 开始构建镜像: $SIF_PATH"
   apptainer build --fakeroot "$SIF_PATH" "$DEF_PATH" || {
     echo "❌ 容器构建失败"
     exit 1
   }
 fi
 
-# === 每个 task + 每个 max_tokens_thinking 独立推理并保存 ===
+# ✅ 开始推理任务
 for k in 512 1024 2048 4096 8192; do
   for task in "${TASK_LIST[@]}"; do
     SUBDIR="s1_${k}/${task}"
+    OUT_DIR="${RESULTS_LOCAL}/${SUBDIR}/${MODEL_ID}"
     echo "🚀 推理任务：task=${task}, max_tokens_thinking=${k}"
 
     apptainer exec --nv \
@@ -55,9 +59,10 @@ for k in 512 1024 2048 4096 8192; do
       "$SIF_PATH" bash -c "
         set -euo pipefail
         huggingface-cli login --token \$HF_TOKEN
+        cd /opt/app/s1
 
         mkdir -p /workspace/results/${SUBDIR}/${MODEL_ID}
-        cd /opt/app/s1
+
         lm_eval \
           --model vllm \
           --model_args pretrained=${MODEL_HF},dtype=float16,tensor_parallel_size=1 \
@@ -68,8 +73,8 @@ for k in 512 1024 2048 4096 8192; do
           --gen_kwargs \"max_gen_toks=32768,max_tokens_thinking=${k}\"
       "
 
-    echo "📦 已完成 task=${task}, k=${k}，结果保存在 results/${SUBDIR}/${MODEL_ID}/"
+    echo "✅ 已完成 task=${task}, k=${k}，结果保存在：${OUT_DIR}"
   done
 done
 
-echo "✅ 所有推理任务完成，结果已分步保存到：$RESULTS_LOCAL/"
+echo "🎉 所有任务完成。全部结果在：$RESULTS_LOCAL/"
