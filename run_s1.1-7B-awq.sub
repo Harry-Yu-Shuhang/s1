@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=s1_s1-7B
+#SBATCH --job-name=s1_s1-7B_awq
 #SBATCH --partition=a100
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --gpus=1
 #SBATCH --time=3-00:00:00
-#SBATCH --output=logs/s1.1-7B_output.log
-#SBATCH --error=logs/s1.1-7B_error.log
+#SBATCH --output=logs/s1.1-7B_awq_output.log
+#SBATCH --error=logs/s1.1-7B_awq_error.log
 
 set -euo pipefail
 trap 'echo "❌ 脚本失败: 行号 $LINENO, 状态码 $?"' ERR
@@ -15,9 +15,9 @@ trap 'echo "❌ 脚本失败: 行号 $LINENO, 状态码 $?"' ERR
 echo "📌 SLURM job started on: $(hostname)"
 echo "📅 Date: $(date)"
 
-# ✅ 模型与任务设置
-MODEL_ID="s1.1-7B"
-MODEL_HF="simplescaling/s1.1-7B"
+# ✅ 模型与任务设置（本地模型路径）
+MODEL_ID="s1.1-7B-awq"
+MODEL_LOCAL="models/models/${MODEL_ID}"  # 本地模型目录
 TASK_LIST=("aime24_nofigures" "gpqa_diamond_openai")
 
 DEF_PATH="/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/apptainer.def"
@@ -27,10 +27,9 @@ RESULTS_IN_CONTAINER="/workspace/results/${MODEL_ID}"
 
 mkdir -p "$RESULTS_LOCAL"
 
-# ✅ HF Token 读取与校验
-HF_TOKEN=$(<.hf_token)
-if [ -z "$HF_TOKEN" ]; then
-  echo "❌ .hf_token 文件为空或不存在，请创建该文件并填入 Hugging Face token"
+# ✅ 检查模型路径
+if [ ! -f "${MODEL_LOCAL}/config.json" ]; then
+  echo "❌ 模型路径无效：${MODEL_LOCAL}/config.json 未找到"
   exit 1
 fi
 
@@ -45,7 +44,7 @@ else
   }
 fi
 
-# ✅ 开始推理任务
+# ✅ 开始推理任务（本地模型不需要 token）
 for k in 512 1024 2048 4096 8192; do
   for task in "${TASK_LIST[@]}"; do
     SUBDIR="${MODEL_ID}_${k}/${task}"
@@ -53,18 +52,17 @@ for k in 512 1024 2048 4096 8192; do
     echo "🚀 推理任务：task=${task}, max_tokens_thinking=${k}"
 
     apptainer exec --nv \
-      --env HF_TOKEN=$HF_TOKEN \
+      --bind "$MODEL_LOCAL:/workspace/model" \
       --bind results:/workspace/results \
       "$SIF_PATH" bash -c "
         set -euo pipefail
-        huggingface-cli login --token \$HF_TOKEN
         cd /opt/app/s1
 
         mkdir -p /workspace/results/${SUBDIR}/${MODEL_ID}
 
         lm_eval \
           --model vllm \
-          --model_args pretrained=${MODEL_HF},dtype=float16,tensor_parallel_size=1 \
+          --model_args pretrained=/workspace/model,dtype=float16,tensor_parallel_size=1 \
           --tasks ${task} \
           --output_path /workspace/results/${SUBDIR}/${MODEL_ID} \
           --log_samples \
