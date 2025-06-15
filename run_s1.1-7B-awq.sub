@@ -17,7 +17,7 @@ echo "📅 Date: $(date)"
 
 # ✅ 模型与任务设置（本地模型路径）
 MODEL_ID="s1.1-7B-awq"
-MODEL_LOCAL="models/models/${MODEL_ID}"  # 本地模型目录
+MODEL_LOCAL="models/${MODEL_ID}"  # 本地模型目录
 TASK_LIST=("aime24_nofigures" "gpqa_diamond_openai")
 
 DEF_PATH="/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/apptainer.def"
