@@ -22,25 +22,46 @@ for task in tasks:
         folder_path = os.path.join(root_dir, folder)
         if not folder.startswith("s1_") or not os.path.isdir(folder_path):
             continue
-        thinking_time = int(folder.split("_")[1])
 
-        for model_name in os.listdir(folder_path):
-            model_dir = os.path.join(folder_path, model_name)
-            for fname in os.listdir(model_dir):
-                if fname.startswith("results") and fname.endswith(".json"):
-                    fpath = os.path.join(model_dir, fname)
-                    with open(fpath) as f:
-                        result = json.load(f)
-                        if task not in result["results"]:
-                            continue
-                        acc = result["results"][task]["exact_match,none"]
-                        if model_name not in data:
-                            data[model_name] = {}
-                        data[model_name][thinking_time] = acc * 100
+        try:
+            thinking_time = int(folder.split("_")[1])
+        except ValueError:
+            continue
+
+        for task_name in os.listdir(folder_path):
+            task_dir = os.path.join(folder_path, task_name)
+            if task != task_name or not os.path.isdir(task_dir):
+                continue
+
+            for model_name in os.listdir(task_dir):
+                model_dir = os.path.join(task_dir, model_name)
+                if not os.path.isdir(model_dir):
+                    continue
+
+                for subdir in os.listdir(model_dir):
+                    result_dir = os.path.join(model_dir, subdir)
+                    if not os.path.isdir(result_dir):
+                        continue
+
+                    for fname in os.listdir(result_dir):
+                        if fname.startswith("results") and fname.endswith(".json"):
+                            fpath = os.path.join(result_dir, fname)
+                            with open(fpath) as f:
+                                result = json.load(f)
+                                if task not in result["results"]:
+                                    continue
+                                acc = result["results"][task].get("exact_match,none", 0)
+                                if model_name not in data:
+                                    data[model_name] = {}
+                                data[model_name][thinking_time] = acc * 100
 
     # 绘图
+    if not data:
+        print(f"⚠️ No data found for task: {task}")
+        continue
+
     plt.figure(figsize=(8, 5))
-    for model_name, scores in data.items():
+    for model_name, scores in sorted(data.items()):
         x = sorted(scores)
         y = [scores[t] for t in x]
         plt.plot(x, y, marker='o', label=model_name)
@@ -58,7 +79,6 @@ for task in tasks:
     plt.legend()
     plt.tight_layout()
 
-    # 保存图像
     save_path = os.path.join(output_dir, f"{task}_accuracy_vs_thinking_time.png")
     plt.savefig(save_path)
     plt.close()
