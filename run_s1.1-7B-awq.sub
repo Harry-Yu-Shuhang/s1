@@ -15,10 +15,10 @@ trap 'echo "❌ 脚本失败: 行号 $LINENO, 状态码 $?"' ERR
 echo "📌 SLURM job started on: $(hostname)"
 echo "📅 Date: $(date)"
 
-# ✅ 模型与任务设置（本地模型路径）
+# ✅ 模型与任务设置
 MODEL_ID="s1.1-7B-awq"
-MODEL_LOCAL="models/${MODEL_ID}"  # 本地模型目录
-TASK_LIST=("aime24_nofigures" "gpqa_diamond_openai")
+MODEL_LOCAL="models/${MODEL_ID}"  # 本地模型路径
+TASK_LIST=("aime24_nofigures" "gpqa_diamond_openai")  # 如有 gated dataset 报错可删掉后者
 
 DEF_PATH="/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/apptainer.def"
 SIF_PATH="/mnt/fast/nobackup/scratch4weeks/ly0008/ysh/s1/s1.sif"
@@ -26,6 +26,13 @@ RESULTS_LOCAL="results/${MODEL_ID}"
 RESULTS_IN_CONTAINER="/workspace/results/${MODEL_ID}"
 
 mkdir -p "$RESULTS_LOCAL"
+
+# ✅ 读取 HF token（gated dataset 必须要）
+HF_TOKEN=$(<.hf_token)
+if [ -z "$HF_TOKEN" ]; then
+  echo "❌ .hf_token 文件为空或不存在，请创建该文件并填入 Hugging Face token"
+  exit 1
+fi
 
 # ✅ 检查模型路径
 if [ ! -f "${MODEL_LOCAL}/config.json" ]; then
@@ -44,7 +51,7 @@ else
   }
 fi
 
-# ✅ 开始推理任务（本地模型不需要 token）
+# ✅ 开始推理任务
 for k in 512 1024 2048 4096 8192; do
   for task in "${TASK_LIST[@]}"; do
     SUBDIR="${MODEL_ID}_${k}/${task}"
@@ -52,10 +59,12 @@ for k in 512 1024 2048 4096 8192; do
     echo "🚀 推理任务：task=${task}, max_tokens_thinking=${k}"
 
     apptainer exec --nv \
+      --env HF_TOKEN=$HF_TOKEN \
       --bind "$MODEL_LOCAL:/workspace/model" \
       --bind results:/workspace/results \
       "$SIF_PATH" bash -c "
         set -euo pipefail
+        huggingface-cli login --token \$HF_TOKEN
         cd /opt/app/s1
 
         mkdir -p /workspace/results/${SUBDIR}/${MODEL_ID}
@@ -67,6 +76,7 @@ for k in 512 1024 2048 4096 8192; do
           --output_path /workspace/results/${SUBDIR}/${MODEL_ID} \
           --log_samples \
           --apply_chat_template \
+          --use_auth_token \
           --gen_kwargs \"max_gen_toks=32768,max_tokens_thinking=${k}\"
       "
 
