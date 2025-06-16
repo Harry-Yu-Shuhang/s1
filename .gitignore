@@ -215,4 +215,6 @@ ENV/
 
  .hf_token
 
+/quantize_visual_results
+
 # End of https://www.gitignore.io/api/macos,linux,django,python,pycharm
