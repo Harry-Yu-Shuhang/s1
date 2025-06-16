@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=s1_s1-7B_awq
+#SBATCH --job-name=s1_s1-7B_gptq-int4
 #SBATCH --partition=a100
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --gpus=1
 #SBATCH --time=3-00:00:00
-#SBATCH --output=logs/s1.1-7B_awq_output.log
-#SBATCH --error=logs/s1.1-7B_awq_error.log
+#SBATCH --output=logs/s1.1-7B_gptq-int4_output.log
+#SBATCH --error=logs/s1.1-7B_gptq-int4_error.log
 
 set -euo pipefail
 trap 'echo "❌ 脚本失败: 行号 $LINENO, 状态码 $?"' ERR
@@ -16,7 +16,7 @@ echo "📌 SLURM job started on: $(hostname)"
 echo "📅 Date: $(date)"
 
 # ✅ 模型与任务设置
-MODEL_ID="s1.1-7B-awq"
+MODEL_ID="s1.1-7B-gptq-int4"
 MODEL_LOCAL="models/${MODEL_ID}"  # 本地模型路径
 TASK_LIST=("aime24_nofigures" "gpqa_diamond_openai")
 
