@@ -14,46 +14,53 @@ tasks = [
     "gpqa_diamond_openai"
 ]
 
-# 遍历每个任务，分别绘图
 for task in tasks:
     data = {}  # {model_name: {thinking_time: acc}}
 
     for folder in sorted(os.listdir(root_dir)):
         folder_path = os.path.join(root_dir, folder)
-        if not folder.startswith("s1_") or not os.path.isdir(folder_path):
+        if "_" not in folder or not os.path.isdir(folder_path):
             continue
 
         try:
-            thinking_time = int(folder.split("_")[1])
+            model_name, thinking_time_str = folder.rsplit("_", 1)
+            thinking_time = int(thinking_time_str)
         except ValueError:
             continue
 
         for task_name in os.listdir(folder_path):
-            task_dir = os.path.join(folder_path, task_name)
-            if task != task_name or not os.path.isdir(task_dir):
+            if task_name != task:
                 continue
 
-            for model_name in os.listdir(task_dir):
-                model_dir = os.path.join(task_dir, model_name)
-                if not os.path.isdir(model_dir):
+            task_dir = os.path.join(folder_path, task_name)
+            if not os.path.isdir(task_dir):
+                continue
+
+            for sub_model_dir in os.listdir(task_dir):
+                result_root = os.path.join(task_dir, sub_model_dir)
+                if not os.path.isdir(result_root):
                     continue
 
-                for subdir in os.listdir(model_dir):
-                    result_dir = os.path.join(model_dir, subdir)
+                for result_subdir in os.listdir(result_root):
+                    result_dir = os.path.join(result_root, result_subdir)
                     if not os.path.isdir(result_dir):
                         continue
 
                     for fname in os.listdir(result_dir):
                         if fname.startswith("results") and fname.endswith(".json"):
                             fpath = os.path.join(result_dir, fname)
-                            with open(fpath) as f:
-                                result = json.load(f)
+                            try:
+                                with open(fpath) as f:
+                                    result = json.load(f)
                                 if task not in result["results"]:
+                                    print(f"⚠️ {fpath} 中不含任务 {task}")
                                     continue
                                 acc = result["results"][task].get("exact_match,none", 0)
                                 if model_name not in data:
                                     data[model_name] = {}
                                 data[model_name][thinking_time] = acc * 100
+                            except Exception as e:
+                                print(f"❌ 读取失败 {fpath}: {e}")
 
     # 绘图
     if not data:
