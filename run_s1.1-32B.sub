@@ -53,7 +53,7 @@ fi
 
 # ✅ 推理任务
 # for k in 512 1024 2048 4096 8192; do
-for k in 4096 8192; do
+for k in 8192; do
   for task in "${TASK_LIST[@]}"; do
     SUBDIR="${MODEL_ID}_${k}/${task}"
     OUT_DIR="${RESULTS_LOCAL}/${SUBDIR}/${MODEL_ID}"
